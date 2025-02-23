@@ -1,0 +1,11 @@
+{
+  "name": "SAD",
+  "description": "A sad svg face",
+  "image": "https://bafybeig2o7drgr63b4cm3grdtzs3mdhipzlihgvvnpalqupiy7rhv4sb5q.ipfs.dweb.link?filename=sad.svg",
+  "attributes": [
+    {
+      "trait_type": "sad",
+      "value": 100
+    }
+  ]
+}

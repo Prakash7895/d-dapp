@@ -11,7 +11,7 @@ contract SoulboundNft is ERC721URIStorage {
     mapping(address => uint256) private s_activeProfileNft;
 
     constructor() ERC721("ProfileNft", "PN") {
-        s_tokenCounter = 0;
+        s_tokenCounter = 1;
     }
 
     // when user click on sign up on FE, this fn is called and mints a nft for profile picture
@@ -21,20 +21,22 @@ contract SoulboundNft is ERC721URIStorage {
 
         s_userToTokenIds[msg.sender].push(s_tokenCounter);
 
-        if (s_userToTokenIds[msg.sender].length == 1) {
-            s_activeProfileNft[msg.sender] = s_tokenCounter;
-        }
+        s_activeProfileNft[msg.sender] = s_tokenCounter;
 
         s_tokenCounter++;
     }
 
-    function tokenIdExists(uint256 tokenId) public view returns (bool) {
+    function tokenIdExists(uint256 tokenId) internal view returns (bool) {
         return ownerOf(tokenId) != address(0);
     }
 
-    function changeProfileNft(uint256 tokenId) public {
-        require(tokenIdExists(tokenId), "Token Id does not exist");
+    modifier onlyOwner(uint256 tokenId) {
         require(ownerOf(tokenId) == msg.sender, "You don't own this NFT");
+        _;
+    }
+
+    function changeProfileNft(uint256 tokenId) public onlyOwner(tokenId) {
+        require(tokenIdExists(tokenId), "Token Id does not exist");
 
         s_activeProfileNft[msg.sender] = tokenId;
     }
@@ -43,13 +45,22 @@ contract SoulboundNft is ERC721URIStorage {
         return s_userToTokenIds[user];
     }
 
+    function getActiveProfileNft(
+        address user
+    ) public view returns (string memory) {
+        uint256 tokenId = s_activeProfileNft[user];
+        require(tokenId != 0, "Your balance is empty");
+        return tokenURI(tokenId);
+    }
+
     function getUserTokenUris(
         address user
     ) public view returns (string[] memory) {
         uint256[] memory tokenIds = s_userToTokenIds[user];
-        string[] memory uris = new string[](tokenIds.length);
+        uint256 totalTokens = tokenIds.length;
+        string[] memory uris = new string[](totalTokens);
 
-        for (uint256 i = 0; i < tokenIds.length; i++) {
+        for (uint256 i = 0; i < totalTokens; i++) {
             uris[i] = tokenURI(tokenIds[i]);
         }
 

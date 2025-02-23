@@ -5,9 +5,11 @@ import {Script} from "forge-std/Script.sol";
 import {SoulboundNft} from "../src/SoulboundNft.sol";
 
 contract DeploySoulboundNft is Script {
-    function run() external {
+    function run() external returns (SoulboundNft) {
         vm.startBroadcast();
         SoulboundNft soulboundNft = new SoulboundNft();
         vm.stopBroadcast();
+
+        return soulboundNft;
     }
 }
