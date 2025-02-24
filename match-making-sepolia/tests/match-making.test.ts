@@ -1,0 +1,55 @@
+import {
+  assert,
+  describe,
+  test,
+  clearStore,
+  beforeAll,
+  afterAll
+} from "matchstick-as/assembly/index"
+import { Address } from "@graphprotocol/graph-ts"
+import { Liked } from "../generated/schema"
+import { Liked as LikedEvent } from "../generated/MatchMaking/MatchMaking"
+import { handleLiked } from "../src/match-making"
+import { createLikedEvent } from "./match-making-utils"
+
+// Tests structure (matchstick-as >=0.5.0)
+// https://thegraph.com/docs/en/developer/matchstick/#tests-structure-0-5-0
+
+describe("Describe entity assertions", () => {
+  beforeAll(() => {
+    let liker = Address.fromString("0x0000000000000000000000000000000000000001")
+    let target = Address.fromString(
+      "0x0000000000000000000000000000000000000001"
+    )
+    let newLikedEvent = createLikedEvent(liker, target)
+    handleLiked(newLikedEvent)
+  })
+
+  afterAll(() => {
+    clearStore()
+  })
+
+  // For more test scenarios, see:
+  // https://thegraph.com/docs/en/developer/matchstick/#write-a-unit-test
+
+  test("Liked created and stored", () => {
+    assert.entityCount("Liked", 1)
+
+    // 0xa16081f360e3847006db660bae1c6d1b2e17ec2a is the default address used in newMockEvent() function
+    assert.fieldEquals(
+      "Liked",
+      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
+      "liker",
+      "0x0000000000000000000000000000000000000001"
+    )
+    assert.fieldEquals(
+      "Liked",
+      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
+      "target",
+      "0x0000000000000000000000000000000000000001"
+    )
+
+    // More assert options:
+    // https://thegraph.com/docs/en/developer/matchstick/#asserts
+  })
+})
