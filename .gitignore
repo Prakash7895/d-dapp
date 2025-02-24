@@ -14,3 +14,6 @@ docs/
 .env
 
 lib/
+broadcast/
+match-making-test-sepolia/
+Proposal.md
