@@ -1,0 +1,17 @@
+type Liked @entity(immutable: true) {
+  id: Bytes!
+  liker: Bytes! # address
+  target: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Match @entity(immutable: true) {
+  id: Bytes!
+  userA: Bytes! # address
+  userB: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
