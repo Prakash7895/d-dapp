@@ -3,25 +3,25 @@ pragma solidity ^0.8.18;
 
 import {Script} from "forge-std/Script.sol";
 import {MatchMaking} from "../src/MatchMaking.sol";
+import {MockAggregator} from "./mock/MockAggregator.sol";
 
 contract DeployMatchMaking is Script {
-    address USER1 = address(0x0F5969dB59eCD8E63aea7056F23983A60A949778);
-    address USER3 = address(0xaF3A89D6B8ECBD83510aF833d82D8A7e706379Bb);
-    address USER4 = address(0x4e281a642ba67Cf4851366EA463dcd76b1bFa491);
-
-    function run() external {
-        MatchMaking matchMaking = MatchMaking(
-            0x8C85db386CA5F169dFE5E2431429AD4596b2d2D5
-        );
-
-        // vm.startBroadcast(USER3);
-        // matchMaking.like(USER2);
-
-        // vm.startBroadcast(USER3);
-        // matchMaking.like(USER4);
-
-        vm.startBroadcast(USER1);
-        matchMaking.like(USER4);
+    function run() external returns (MatchMaking) {
+        address oracleAddress = getOracleAddress();
+        vm.startBroadcast();
+        MatchMaking matchMaking = new MatchMaking(500, 7, oracleAddress);
         vm.stopBroadcast();
+
+        return matchMaking;
+    }
+
+    function getOracleAddress() internal returns (address) {
+        if (block.chainid == 1) {
+            return 0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419; // mainnet oracle
+        } else if (block.chainid == 11155111) {
+            return 0x694AA1769357215DE4FAC081bf1f309aDC325306; // sepolia oracle
+        }
+        MockAggregator mockOracle = new MockAggregator(2495.68 * 1e8);
+        return address(mockOracle);
     }
 }

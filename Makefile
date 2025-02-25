@@ -8,3 +8,9 @@ deployToSepolia:
 
 testSepolia:
 	forge script $(PATH) --rpc-url $(SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY_ACCOUNT1) --broadcast -vvvv
+
+testMatchMakingSepolia:
+	forge test test/MatchMakingTest.t.sol --fork-url $(SEPOLIA_RPC_URL) -vvvv 
+
+testMatchMakingMainnet:
+	forge test test/MatchMakingTest.t.sol --fork-url $(MAINNET_RPC_URL) -vvvv 
