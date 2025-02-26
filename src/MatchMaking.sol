@@ -5,10 +5,9 @@ import {SimpleMultiSig} from "./SimpleMultiSig.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {PriceConvertor} from "./PriceConvertor.sol";
 import {AggregatorV3Interface} from "@chainlink/interfaces/AggregatorV3Interface.sol";
+import {Owner} from "./Owner.sol";
 
-contract MatchMaking is PriceConvertor {
-    address public s_owner;
-    uint256 public s_likeAmountInCents = 300; // in cents
+contract MatchMaking is PriceConvertor, Owner {
     uint256 public s_likeExpirationDays = 7;
 
     string private errorMsg;
@@ -33,18 +32,20 @@ contract MatchMaking is PriceConvertor {
         uint256 _amountInCents, // in cents
         uint256 _likeExpirationDays,
         address priceFeedAddress
-    ) PriceConvertor(priceFeedAddress) {
-        s_likeAmountInCents = _amountInCents;
+    ) PriceConvertor(priceFeedAddress) Owner(msg.sender, _amountInCents) {
         s_likeExpirationDays = _likeExpirationDays;
-        s_owner = msg.sender;
         updateErrorMsg();
+    }
+
+    function s_likeAmountInCents() public view returns (uint) {
+        return s_amount;
     }
 
     function like(address target) external payable {
         uint amountSent = getPriceInCents(msg.value);
         require(msg.sender != target, "Cannot like yourself");
         require(!s_likes[msg.sender][target].like, "Already liked this user");
-        require(amountSent == s_likeAmountInCents, errorMsg);
+        require(amountSent == s_likeAmountInCents(), errorMsg);
 
         ILike memory tmp = ILike({like: true, timestamp: block.timestamp});
 
@@ -69,7 +70,7 @@ contract MatchMaking is PriceConvertor {
         // create a multisig wallet
         SimpleMultiSig simpleMultiSig = new SimpleMultiSig(users, 2);
 
-        uint amountToTransfer = getWeiFromCents(2 * s_likeAmountInCents);
+        uint amountToTransfer = getWeiFromCents(2 * s_likeAmountInCents());
         amountToTransfer = (amountToTransfer * 8) / 10;
 
         // transfer fund: 90% of total
@@ -82,17 +83,6 @@ contract MatchMaking is PriceConvertor {
         }
 
         require(success, "Transfer to multisig walled failed!");
-    }
-
-    function transferToOwner(uint256 amount) public {
-        require(msg.sender == s_owner, "Only onwer can withdraw");
-        require(amount > 0, "Amount cannot be 0.");
-        require(
-            amount <= address(this).balance,
-            "Amount cannot be greater than contract's balance."
-        );
-        (bool success, ) = payable(s_owner).call{value: amount}("");
-        require(success, "Payment Failed.");
     }
 
     // call this from cron job, set likes[user1][user2] = {like: false, timestamp: 0}
@@ -126,17 +116,14 @@ contract MatchMaking is PriceConvertor {
     }
 
     function refundExpiredLike(address liker) internal {
-        uint refundAmount = getWeiFromCents(s_likeAmountInCents);
+        uint refundAmount = getWeiFromCents(s_likeAmountInCents());
         (bool success, ) = payable(liker).call{value: refundAmount}("");
         require(success, "Refund transfer failed");
     }
 
     // in cents
     function setLikeAmount(uint256 _amount) external {
-        require(msg.sender == s_owner, "Only onwer can update like amount!");
-        require(_amount > 0, "Only greater than 0 values are allowed");
-
-        s_likeAmountInCents = _amount;
+        setAmount(_amount);
         updateErrorMsg();
     }
 
@@ -151,8 +138,9 @@ contract MatchMaking is PriceConvertor {
     }
 
     function updateErrorMsg() internal {
-        uint256 dollars = s_likeAmountInCents / 100;
-        uint256 cents = s_likeAmountInCents % 100;
+        uint amt = s_likeAmountInCents();
+        uint256 dollars = amt / 100;
+        uint256 cents = amt % 100;
 
         errorMsg = string.concat(
             "Amount should be $",

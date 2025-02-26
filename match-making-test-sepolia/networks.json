@@ -1,8 +1,0 @@
-{
-  "sepolia": {
-    "MatchMaking": {
-      "address": "0x8C85db386CA5F169dFE5E2431429AD4596b2d2D5",
-      "startBlock": 7774556
-    }
-  }
-}

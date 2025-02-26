@@ -7,7 +7,7 @@ import {SoulboundNft} from "../src/SoulboundNft.sol";
 contract DeploySoulboundNft is Script {
     function run() external returns (SoulboundNft) {
         vm.startBroadcast();
-        SoulboundNft soulboundNft = new SoulboundNft();
+        SoulboundNft soulboundNft = new SoulboundNft(1e18 / 1000);
         vm.stopBroadcast();
 
         return soulboundNft;

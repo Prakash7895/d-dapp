@@ -4,24 +4,41 @@ pragma solidity ^0.8.18;
 import {ERC721} from "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
 import {ERC721URIStorage} from "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
+import {Owner} from "./Owner.sol";
 
-contract SoulboundNft is ERC721URIStorage {
+contract SoulboundNft is ERC721URIStorage, Owner {
     uint256 private s_tokenCounter;
     mapping(address => uint256[]) private s_userToTokenIds;
     mapping(address => uint256) private s_activeProfileNft;
 
-    constructor() ERC721("ProfileNft", "PN") {
+    event ProfileMinted(address indexed user, uint256 tokenId);
+
+    constructor(
+        uint _mintFee
+    ) ERC721("ProfileNft", "PN") Owner(msg.sender, _mintFee) {
         s_tokenCounter = 1;
     }
 
+    function s_mintFee() public view returns (uint) {
+        return s_amount;
+    }
+
     // when user click on sign up on FE, this fn is called and mints a nft for profile picture
-    function createUserProfile(string memory tokenUri) public {
+    function createUserProfile(string memory tokenUri) public payable {
+        require(msg.value >= s_mintFee(), "Insufficient mint fee");
+
+        mintNewNft(tokenUri);
+    }
+
+    function mintNewNft(string memory tokenUri) public {
         _safeMint(msg.sender, s_tokenCounter);
         _setTokenURI(s_tokenCounter, tokenUri);
 
         s_userToTokenIds[msg.sender].push(s_tokenCounter);
 
         s_activeProfileNft[msg.sender] = s_tokenCounter;
+
+        emit ProfileMinted(msg.sender, s_tokenCounter);
 
         s_tokenCounter++;
     }
@@ -83,4 +100,6 @@ contract SoulboundNft is ERC721URIStorage {
     ) public pure override(ERC721, IERC721) {
         revert("Not allowed to transfer profile nft...");
     }
+
+    receive() external payable {}
 }

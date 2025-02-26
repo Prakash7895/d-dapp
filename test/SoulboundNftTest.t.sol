@@ -30,22 +30,26 @@ contract SoulboundNftTest is Test {
 
         soulboundNft = deployer.run();
 
-        vm.prank(USER1);
-        soulboundNft.createUserProfile(PUG_URI);
-
-        vm.prank(USER2);
-        soulboundNft.createUserProfile(HAPPY_FACE_URI);
-
-        vm.prank(USER2);
-        soulboundNft.createUserProfile(SAD_URI);
+        vm.deal(USER1, 10 ether);
+        vm.deal(USER2, 10 ether);
+        vm.deal(USER3, 10 ether);
 
         vm.prank(USER1);
-        soulboundNft.createUserProfile(SHIBA_INU_URI);
+        soulboundNft.createUserProfile{value: 1e15}(PUG_URI);
+
+        vm.prank(USER2);
+        soulboundNft.createUserProfile{value: 1e15}(HAPPY_FACE_URI);
+
+        vm.prank(USER2);
+        soulboundNft.createUserProfile{value: 1e15}(SAD_URI);
+
+        vm.prank(USER1);
+        soulboundNft.createUserProfile{value: 1e15}(SHIBA_INU_URI);
     }
 
     function testCanCreateUserProfile() public {
         vm.prank(USER1);
-        soulboundNft.createUserProfile(PUG_URI);
+        soulboundNft.mintNewNft(PUG_URI);
 
         string memory token0 = soulboundNft.tokenURI(1);
 
