@@ -133,10 +133,16 @@ contract MatchMakingTest is Test {
 
         console.log("block.timestamp", block.timestamp);
 
+        uint user1Balance = address(USER1).balance;
+        console.log("user1Balance", user1Balance);
+
         vm.warp(block.timestamp + expirationDays * 1 days + 1);
         console.log("block.timestampNEW", block.timestamp);
-        vm.prank(OWNER);
+        vm.prank(USER1);
         matchMaking.unSetLikeOnExpiration(USER1, USER2);
+
+        uint user1BalanceNow = address(USER1).balance;
+        console.log("user1BalanceNow", user1BalanceNow);
 
         (bool like, uint timestamp) = matchMaking.s_likes(USER1, USER2);
 
@@ -144,6 +150,8 @@ contract MatchMakingTest is Test {
         console.log("timestamp1111", timestamp);
 
         assertEq(timestamp, 0);
+
+        assert(user1BalanceNow > user1Balance);
     }
 
     function testUnsetBeforeExpirationLimit() public {

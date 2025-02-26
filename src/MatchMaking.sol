@@ -98,8 +98,11 @@ contract MatchMaking is PriceConvertor {
     // call this from cron job, set likes[user1][user2] = {like: false, timestamp: 0}
     // if not matched within like expiration limit
     function unSetLikeOnExpiration(address user1, address user2) external {
-        require(msg.sender == s_owner, "Only onwer can reset likes!");
         ILike memory tmp = s_likes[user1][user2];
+        require(
+            tmp.like && msg.sender == user1,
+            "Only liker can reset likes and claim refund!"
+        );
         ILike memory tmp1 = s_likes[user2][user1];
         if (tmp.like && tmp1.like) {
             revert("Can't unlike after match");
@@ -112,10 +115,6 @@ contract MatchMaking is PriceConvertor {
         );
 
         require(
-            msg.sender == s_owner,
-            "Only onwer can reset like after expiration days."
-        );
-        require(
             (block.timestamp - tmp.timestamp) > s_likeExpirationDays * 1 days,
             errorMessage
         );
@@ -123,6 +122,13 @@ contract MatchMaking is PriceConvertor {
         tmp.like = false;
         tmp.timestamp = 0;
         s_likes[user1][user2] = tmp;
+        refundExpiredLike(user1);
+    }
+
+    function refundExpiredLike(address liker) internal {
+        uint refundAmount = getWeiFromCents(s_likeAmountInCents);
+        (bool success, ) = payable(liker).call{value: refundAmount}("");
+        require(success, "Refund transfer failed");
     }
 
     // in cents
