@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.18;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, Vm} from "forge-std/Test.sol";
 import {console} from "forge-std/console.sol";
 import {MatchMaking} from "../src/MatchMaking.sol";
 import {DeployMatchMaking} from "../script/DeployMatchMaking.s.sol";
@@ -164,10 +164,66 @@ contract MatchMakingTest is Test {
 
         uint requiredWei = ((likeAmount + 1) * 1e18) / tmp;
         console.log("requiredWei::", requiredWei);
-        console.log("Expected wei To transfer::", (requiredWei * 8) / 10);
 
         uint tmpWei = matchMaking.getWeiFromCents(2 * (likeAmount + 1));
         console.log("tmpWei::", tmpWei, (tmpWei * 8) / 10);
+
+        vm.prank(USER1);
+        matchMaking.like{value: requiredWei}(USER2);
+
+        vm.prank(USER2);
+        vm.recordLogs();
+        matchMaking.like{value: requiredWei}(USER1);
+
+        (bool liked12, ) = matchMaking.s_likes(USER1, USER2);
+        (bool liked21, ) = matchMaking.s_likes(USER2, USER1);
+        console.log("liked12", liked12);
+        console.log("liked21", liked21);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bool found = false;
+        console.log("LEN", entries.length);
+        address walletAddress;
+
+        for (uint i = 0; i < entries.length; i++) {
+            // If the log topic[0] equals the keccak256 hash of the event signature,
+            // then we have our MultiSigCreated event.
+            console.log("Log entry", i);
+            console.logBytes32(entries[i].topics[0]); // Log the event signature
+            if (
+                entries[i].topics.length > 0 &&
+                entries[i].topics[0] ==
+                keccak256("MultiSigCreated(address,address,address)")
+            ) {
+                // Decode the event data. Note that indexed parameters are in topics.
+                // For a typical event like:
+                // event MultiSigCreated(address indexed walletAddress, address indexed userA, address indexed userB);
+                // The topics are:
+                // topics[0]: event signature
+                // topics[1]: walletAddress (padded)
+                // topics[2]: userA
+                // topics[3]: userB
+                walletAddress = address(uint160(uint256(entries[i].topics[1])));
+                address userA = address(uint160(uint256(entries[i].topics[2])));
+                address userB = address(uint160(uint256(entries[i].topics[3])));
+                console.log("MultiSig wallet address:", walletAddress);
+                console.logAddress(userA);
+                console.logAddress(userB);
+                found = true;
+            }
+        }
+
+        console.log("ADDRESS", walletAddress);
+        console.log("ADDRESS BALANCE", address(walletAddress).balance);
+        assertTrue(found, "MultiSigCreated event not found");
+    }
+
+    function testUnsetAfterMatch() public {
+        uint tmp = matchMaking.getPriceInCents(1e18);
+        console.log("AMOUNT::", tmp);
+
+        uint requiredWei = ((likeAmount + 1) * 1e18) / tmp;
+        console.log("requiredWei::", requiredWei);
 
         vm.prank(USER1);
         matchMaking.like{value: requiredWei}(USER2);
@@ -177,33 +233,14 @@ contract MatchMakingTest is Test {
 
         (bool liked12, ) = matchMaking.s_likes(USER1, USER2);
         (bool liked21, ) = matchMaking.s_likes(USER2, USER1);
-        console.log("liked12", liked12);
-        console.log("liked21", liked21);
+
+        assertEq(liked12, liked21);
+
+        uint expirationDays = matchMaking.s_likeExpirationDays();
+
+        vm.warp(block.timestamp + expirationDays * 1 days + 1);
+        vm.expectRevert();
+        vm.prank(OWNER);
+        matchMaking.unSetLikeOnExpiration(USER1, USER2);
     }
-
-    // function testUnsetAfterMatch() public {
-    //     uint tmp = matchMaking.getPriceInCents(1e18);
-    //     console.log("AMOUNT::", tmp);
-
-    //     uint requiredWei = ((likeAmount + 1) * 1e18) / tmp;
-    //     console.log("requiredWei::", requiredWei);
-
-    //     vm.prank(USER1);
-    //     matchMaking.like{value: requiredWei}(USER2);
-
-    //     vm.prank(USER2);
-    //     matchMaking.like{value: requiredWei}(USER1);
-
-    //     (bool liked12, ) = matchMaking.s_likes(USER1, USER2);
-    //     (bool liked21, ) = matchMaking.s_likes(USER2, USER1);
-
-    //     assertEq(liked12, liked21);
-
-    //     uint expirationDays = matchMaking.s_likeExpirationDays();
-
-    //     vm.warp(block.timestamp + expirationDays * 1 days + 1);
-    //     vm.expectRevert();
-    //     vm.prank(OWNER);
-    //     matchMaking.unSetLikeOnExpiration(USER1, USER2);
-    // }
 }

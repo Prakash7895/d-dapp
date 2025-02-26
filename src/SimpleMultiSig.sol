@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: SEE LICENSE IN LICENSE
 pragma solidity ^0.8.18;
 
+enum ProposalStatus {
+    ACTIVE,
+    INACTIVE
+}
+
 contract SimpleMultiSig {
     address[] public s_owners;
     uint256 public s_requiredApprovals;
@@ -11,6 +16,7 @@ contract SimpleMultiSig {
         uint256 approvals;
         mapping(address => bool) approved;
         bool executed;
+        ProposalStatus status;
     }
 
     Proposal[] public s_proposals;
@@ -41,6 +47,7 @@ contract SimpleMultiSig {
         address payable _destination,
         uint256 _amount
     ) external onlyOwner {
+        require(_amount > 0, "Amount should be greater than 0.");
         Proposal storage newProposal = s_proposals.push();
 
         newProposal.destination = _destination;
@@ -48,12 +55,17 @@ contract SimpleMultiSig {
         newProposal.approvals = 1;
         newProposal.approved[msg.sender] = true;
         newProposal.executed = false;
+        newProposal.status = ProposalStatus.ACTIVE;
     }
 
-    function approveProposal(uint256 proposalIdx) external {
-        require(proposalIdx >= s_proposals.length, "Index out of scope");
+    function approveProposal(uint256 proposalIdx) external onlyOwner {
+        require(proposalIdx < s_proposals.length, "Index out of scope");
 
         Proposal storage proposal = s_proposals[proposalIdx];
+        require(
+            proposal.status == ProposalStatus.ACTIVE,
+            "Cant approve inactive proposal"
+        );
         require(!proposal.executed, "Already executed!");
         require(!proposal.approved[msg.sender], "Already approved!");
         proposal.approved[msg.sender] = true;
@@ -62,6 +74,14 @@ contract SimpleMultiSig {
         if (proposal.approvals >= s_requiredApprovals) {
             executeProposal(proposalIdx);
         }
+    }
+
+    function inactivateProposal(uint proposalIdx) external onlyOwner {
+        require(proposalIdx < s_proposals.length, "Index out of scope");
+
+        Proposal storage proposal = s_proposals[proposalIdx];
+        require(!proposal.executed, "Already executed!");
+        proposal.status = ProposalStatus.INACTIVE;
     }
 
     function executeProposal(uint256 proposalIdx) internal {
