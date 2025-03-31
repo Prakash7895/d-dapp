@@ -11,7 +11,7 @@ contract SoulboundNft is ERC721URIStorage, Owner {
     mapping(address => uint256[]) private s_userToTokenIds;
     mapping(address => uint256) private s_activeProfileNft;
 
-    event ProfileMinted(address indexed user, uint256 tokenId);
+    event ProfileMinted(address indexed user, uint256 tokenId, string tokenUri);
 
     constructor(
         uint _mintFee
@@ -38,7 +38,7 @@ contract SoulboundNft is ERC721URIStorage, Owner {
 
         s_activeProfileNft[msg.sender] = s_tokenCounter;
 
-        emit ProfileMinted(msg.sender, s_tokenCounter);
+        emit ProfileMinted(msg.sender, s_tokenCounter, tokenUri);
 
         s_tokenCounter++;
     }
