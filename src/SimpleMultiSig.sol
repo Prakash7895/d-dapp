@@ -2,8 +2,8 @@
 pragma solidity ^0.8.18;
 
 enum ProposalStatus {
-    ACTIVE,
-    INACTIVE
+    INACTIVE,
+    ACTIVE
 }
 
 contract SimpleMultiSig {
@@ -41,6 +41,49 @@ contract SimpleMultiSig {
         );
         s_owners = _owners;
         s_requiredApprovals = _requiredApprovals;
+    }
+
+    function getOwners() public view returns (address[] memory) {
+        return s_owners;
+    }
+
+    function getRequiredApprovals() public view returns (uint256) {
+        return s_requiredApprovals;
+    }
+
+    function getProposal(
+        uint256 index
+    )
+        public
+        view
+        returns (
+            address destination,
+            uint256 amount,
+            uint256 approvals,
+            bool executed,
+            ProposalStatus status
+        )
+    {
+        Proposal storage proposal = s_proposals[index];
+        return (
+            proposal.destination,
+            proposal.amount,
+            proposal.approvals,
+            proposal.executed,
+            proposal.status
+        );
+    }
+
+    function getProposalCount() public view returns (uint256) {
+        return s_proposals.length;
+    }
+
+    function isApproved(
+        uint256 proposalIdx,
+        address owner
+    ) public view returns (bool) {
+        require(proposalIdx < s_proposals.length, "Index out of scope");
+        return s_proposals[proposalIdx].approved[owner];
     }
 
     function submitProposal(
