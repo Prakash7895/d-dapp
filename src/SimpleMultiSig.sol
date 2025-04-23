@@ -123,6 +123,10 @@ contract SimpleMultiSig {
         require(proposalIdx < s_proposals.length, "Index out of scope");
 
         Proposal storage proposal = s_proposals[proposalIdx];
+        require(
+            proposal.status == ProposalStatus.ACTIVE,
+            "Proposal already inactive"
+        );
         require(!proposal.executed, "Already executed!");
         proposal.status = ProposalStatus.INACTIVE;
     }
