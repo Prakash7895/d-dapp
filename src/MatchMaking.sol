@@ -9,7 +9,7 @@ import {Owner} from "./Owner.sol";
 
 contract MatchMaking is PriceConvertor, Owner {
     uint256 public s_likeExpirationDays = 7;
-    uint256 public s_commission = 80;
+    uint256 public s_commission = 10;
 
     struct ILike {
         bool like;
@@ -32,7 +32,7 @@ contract MatchMaking is PriceConvertor, Owner {
         uint256 _amount,
         uint256 _likeExpirationDays,
         address priceFeedAddress
-    ) PriceConvertor(priceFeedAddress) Owner(msg.sender, _amount) {
+    ) PriceConvertor(priceFeedAddress) Owner(msg.sender, _amount, 0) {
         s_likeExpirationDays = _likeExpirationDays;
     }
 
@@ -68,20 +68,27 @@ contract MatchMaking is PriceConvertor, Owner {
         // create a multisig wallet
         SimpleMultiSig simpleMultiSig = new SimpleMultiSig(users, 2);
 
-        uint amountToTransfer = (s_likes[user1][user2].amount +
+        uint total = (s_likes[user1][user2].amount +
             s_likes[user2][user1].amount);
-        amountToTransfer = (amountToTransfer * s_commission) / 100;
+
+        uint commissionAmount = (total * s_commission) / 100;
+
+        uint amountToTransfer = total - commissionAmount;
+
+        s_maxAmountCanWithdraw += commissionAmount;
+
+        require(
+            address(this).balance >= amountToTransfer,
+            "Insufficient contract balance"
+        );
 
         // transfer fund: 90% of total
         (bool success, ) = payable(simpleMultiSig).call{
             value: amountToTransfer
         }("");
-
-        if (success) {
-            emit MultiSigCreated(address(simpleMultiSig), user1, user2);
-        }
-
         require(success, "Transfer to multisig walled failed!");
+
+        emit MultiSigCreated(address(simpleMultiSig), user1, user2);
     }
 
     // call this from cron job, set likes[user1][user2] = {like: false, timestamp: 0}

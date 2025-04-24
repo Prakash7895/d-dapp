@@ -10,7 +10,11 @@ contract DeployDApp is Script {
     function run() external {
         address oracleAddress = getOracleAddress();
         vm.startBroadcast();
-        MatchMaking matchMaking = new MatchMaking(1e18 / 100, 3, oracleAddress);
+        MatchMaking matchMaking = new MatchMaking(
+            1e18 / 1000,
+            1,
+            oracleAddress
+        );
         SoulboundNft soulboundNft = new SoulboundNft(1e18 / 1000);
         console.log("matchMaking", address(matchMaking));
         console.log("soulboundNft", address(soulboundNft));

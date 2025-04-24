@@ -15,7 +15,7 @@ contract SoulboundNft is ERC721URIStorage, Owner {
 
     constructor(
         uint _mintFee
-    ) ERC721("ProfileNft", "PN") Owner(msg.sender, _mintFee) {
+    ) ERC721("ProfileNft", "PN") Owner(msg.sender, _mintFee, 0) {
         s_tokenCounter = 1;
     }
 
@@ -28,6 +28,7 @@ contract SoulboundNft is ERC721URIStorage, Owner {
         require(msg.value >= s_mintFee(), "Insufficient mint fee");
 
         mintNewNft(tokenUri);
+        setMaxAmount();
     }
 
     function mintNewNft(string memory tokenUri) public {
@@ -101,5 +102,11 @@ contract SoulboundNft is ERC721URIStorage, Owner {
         revert("Not allowed to transfer profile nft...");
     }
 
-    receive() external payable {}
+    function setMaxAmount() internal {
+        s_maxAmountCanWithdraw = address(this).balance;
+    }
+
+    receive() external payable {
+        setMaxAmount();
+    }
 }
