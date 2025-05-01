@@ -19,6 +19,7 @@ contract MatchMaking is PriceConvertor, Owner {
     mapping(address => mapping(address => ILike)) public s_likes;
 
     event Like(address indexed liker, address indexed target);
+    event UnLike(address indexed liker, address indexed target);
 
     event Match(address indexed userA, address indexed userB);
 
@@ -111,7 +112,8 @@ contract MatchMaking is PriceConvertor, Owner {
         );
 
         require(
-            (block.timestamp - tmp.timestamp) > s_likeExpirationDays * 1 days,
+            (block.timestamp - tmp.timestamp) >
+                s_likeExpirationDays * 1 minutes,
             errorMessage
         );
 
@@ -121,6 +123,7 @@ contract MatchMaking is PriceConvertor, Owner {
         tmp.timestamp = 0;
         tmp.amount = 0;
         s_likes[user1][user2] = tmp;
+        emit UnLike(user1, user2);
         refundExpiredLike(user1, amountToRefund);
     }
 
