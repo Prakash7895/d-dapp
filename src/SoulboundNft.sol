@@ -12,6 +12,7 @@ contract SoulboundNft is ERC721URIStorage, Owner {
     mapping(address => uint256) private s_activeProfileNft;
 
     event ProfileMinted(address indexed user, uint256 tokenId, string tokenUri);
+    event ActiveNftChanged(address indexed user, uint256 tokenId);
 
     constructor(
         uint _mintFee
@@ -57,6 +58,8 @@ contract SoulboundNft is ERC721URIStorage, Owner {
         require(tokenIdExists(tokenId), "Token Id does not exist");
 
         s_activeProfileNft[msg.sender] = tokenId;
+
+        emit ActiveNftChanged(msg.sender, tokenId);
     }
 
     function getUserNfts(address user) public view returns (uint256[] memory) {
