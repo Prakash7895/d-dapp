@@ -20,6 +20,7 @@ contract Owner {
             "Amount cannot be greater than maximum withdrawable amount."
         );
         (bool success, ) = payable(s_owner).call{value: amount}("");
+        s_maxAmountCanWithdraw = s_maxAmountCanWithdraw - amount;
         require(success, "Payment Failed.");
     }
 
