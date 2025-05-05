@@ -2,19 +2,18 @@
 pragma solidity ^0.8.18;
 
 import {SimpleMultiSig} from "./SimpleMultiSig.sol";
-import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {PriceConvertor} from "./PriceConvertor.sol";
 import {AggregatorV3Interface} from "@chainlink/interfaces/AggregatorV3Interface.sol";
 import {Owner} from "./Owner.sol";
 
 contract MatchMaking is PriceConvertor, Owner {
-    uint256 public s_likeExpirationDays = 7;
-    uint256 public s_commission = 10;
+    uint256 public s_likeExpirationDays;
+    uint256 public s_commission;
 
     struct ILike {
-        bool like;
-        uint256 timestamp;
         uint256 amount;
+        uint256 timestamp;
+        bool like;
     }
     mapping(address => mapping(address => ILike)) public s_likes;
 
@@ -32,27 +31,32 @@ contract MatchMaking is PriceConvertor, Owner {
     constructor(
         uint256 _amount,
         uint256 _likeExpirationDays,
+        uint256 _commission,
         address priceFeedAddress
     ) PriceConvertor(priceFeedAddress) Owner(msg.sender, _amount, 0) {
         s_likeExpirationDays = _likeExpirationDays;
+        s_commission = _commission;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == s_owner, "Only owner can perform this action!");
+        _;
     }
 
     function like(address target) external payable {
+        ILike storage likeEntry = s_likes[msg.sender][target];
         require(msg.sender != target, "Cannot like yourself");
-        require(!s_likes[msg.sender][target].like, "Already liked this user");
+        require(!likeEntry.like, "Already liked this user");
         require(msg.value == s_amount, "Insufficient like amount");
 
-        ILike memory tmp = ILike({
-            like: true,
-            timestamp: block.timestamp,
-            amount: msg.value
-        });
-
-        s_likes[msg.sender][target] = tmp;
+        likeEntry.amount = msg.value;
+        likeEntry.timestamp = block.timestamp;
+        likeEntry.like = true;
 
         emit Like(msg.sender, target);
 
-        if (s_likes[target][msg.sender].like) {
+        bool isMutualLike = s_likes[target][msg.sender].like;
+        if (isMutualLike) {
             emit Match(msg.sender, target);
             transferFundToMultiSigWallet(msg.sender, target);
         }
@@ -62,12 +66,8 @@ contract MatchMaking is PriceConvertor, Owner {
         address user1,
         address user2
     ) internal {
-        address[] memory users = new address[](2);
-        users[0] = user1;
-        users[1] = user2;
-
         // create a multisig wallet
-        SimpleMultiSig simpleMultiSig = new SimpleMultiSig(users, 2);
+        SimpleMultiSig simpleMultiSig = new SimpleMultiSig(user1, user2);
 
         uint total = (s_likes[user1][user2].amount +
             s_likes[user2][user1].amount);
@@ -75,8 +75,6 @@ contract MatchMaking is PriceConvertor, Owner {
         uint commissionAmount = (total * s_commission) / 100;
 
         uint amountToTransfer = total - commissionAmount;
-
-        s_maxAmountCanWithdraw += commissionAmount;
 
         require(
             address(this).balance >= amountToTransfer,
@@ -89,67 +87,50 @@ contract MatchMaking is PriceConvertor, Owner {
         }("");
         require(success, "Transfer to multisig walled failed!");
 
+        s_maxAmountCanWithdraw += commissionAmount;
+
         emit MultiSigCreated(address(simpleMultiSig), user1, user2);
     }
 
     // call this from cron job, set likes[user1][user2] = {like: false, timestamp: 0}
     // if not matched within like expiration limit
     function unSetLikeOnExpiration(address user1, address user2) external {
-        ILike memory tmp = s_likes[user1][user2];
+        ILike storage tmp = s_likes[user1][user2];
         require(
             tmp.like && msg.sender == user1,
             "Only liker can reset likes and claim refund!"
         );
-        ILike memory tmp1 = s_likes[user2][user1];
+        ILike storage tmp1 = s_likes[user2][user1];
         if (tmp.like && tmp1.like) {
             revert("Can't unlike after match");
         }
 
-        string memory errorMessage = string.concat(
-            "Cannot unset like before (",
-            Strings.toString(s_likeExpirationDays),
-            ") Days"
-        );
-
         require(
             (block.timestamp - tmp.timestamp) >
                 s_likeExpirationDays * 1 minutes,
-            errorMessage
+            "Cannot unset like before expiration"
         );
 
         uint256 amountToRefund = tmp.amount;
 
-        tmp.like = false;
-        tmp.timestamp = 0;
         tmp.amount = 0;
-        s_likes[user1][user2] = tmp;
-        emit UnLike(user1, user2);
-        refundExpiredLike(user1, amountToRefund);
-    }
+        tmp.timestamp = 0;
+        tmp.like = false;
 
-    function refundExpiredLike(address liker, uint256 refundAmount) internal {
-        (bool success, ) = payable(liker).call{value: refundAmount}("");
+        emit UnLike(user1, user2);
+        (bool success, ) = payable(user1).call{value: amountToRefund}("");
         require(success, "Refund transfer failed");
     }
 
-    function setLikeAmount(uint256 _amount) external {
-        setAmount(_amount);
-    }
-
-    function setLikeExpirationDays(uint256 _days) external {
-        require(
-            msg.sender == s_owner,
-            "Only onwer can update like expiration days!"
-        );
+    function setLikeExpirationDays(uint256 _days) external onlyOwner {
         require(_days > 0, "Only greater than 0 values are allowed");
 
         s_likeExpirationDays = _days;
     }
 
-    function setCommission(uint256 _commission) external {
-        require(msg.sender == s_owner, "Only onwer can update commission!");
-        require(_commission > 0, "Only greater than 0 values are allowed");
-        require(_commission < 100, "Only less than 100 values are allowed");
+    function setCommission(uint256 _commission) external onlyOwner {
+        bool inRange = _commission > 0 && _commission < 100;
+        require(inRange, "commission should be between 0 and 100");
 
         s_commission = _commission;
     }
