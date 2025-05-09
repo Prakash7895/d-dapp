@@ -36,7 +36,10 @@ contract MatchMakingTest is Test {
         vm.prank(USER1);
         matchMaking.like{value: requiredWei}(USER2);
 
-        (bool liked, ) = matchMaking.s_likes(USER1, USER2);
+        (bool liked, uint256 timestamp, uint256 amount) = matchMaking.s_likes(
+            USER1,
+            USER2
+        );
 
         assertEq(liked, true);
     }
@@ -44,12 +47,10 @@ contract MatchMakingTest is Test {
     function testNewAmount() public {
         console.log("Onwer", OWNER);
         console.logAddress(matchMaking.s_owner());
-        console.log("s_likeAmountInCents1", matchMaking.s_likeAmountInCents());
+
         uint newLikeAmount = 300;
         vm.prank(OWNER);
         matchMaking.setLikeAmount(newLikeAmount);
-
-        console.log("s_likeAmountInCents2", matchMaking.s_likeAmountInCents());
 
         uint tmp = matchMaking.getPriceInCents(1e18);
         console.log("AMOUNT::", tmp);
@@ -59,7 +60,10 @@ contract MatchMakingTest is Test {
 
         vm.prank(USER1);
         matchMaking.like{value: requiredWei}(USER2);
-        (bool liked, ) = matchMaking.s_likes(USER1, USER2);
+        (bool liked, uint256 timestamp, uint256 amount) = matchMaking.s_likes(
+            USER1,
+            USER2
+        );
         console.log("balance", address(matchMaking).balance);
 
         assertEq(liked, true);
@@ -124,8 +128,14 @@ contract MatchMakingTest is Test {
         uint expirationDays = matchMaking.s_likeExpirationDays();
         console.log("expirationDays", expirationDays);
 
-        (bool like12, uint timestamp12) = matchMaking.s_likes(USER1, USER2);
-        (bool like21, uint timestamp21) = matchMaking.s_likes(USER2, USER1);
+        (bool like12, uint timestamp12, uint amount12) = matchMaking.s_likes(
+            USER1,
+            USER2
+        );
+        (bool like21, uint timestamp21, uint amount21) = matchMaking.s_likes(
+            USER2,
+            USER1
+        );
         console.log("like12", like12);
         console.log("timestamp12", timestamp12);
         console.log("like21", like21);
@@ -144,7 +154,10 @@ contract MatchMakingTest is Test {
         uint user1BalanceNow = address(USER1).balance;
         console.log("user1BalanceNow", user1BalanceNow);
 
-        (bool like, uint timestamp) = matchMaking.s_likes(USER1, USER2);
+        (bool like, uint timestamp, uint _amount) = matchMaking.s_likes(
+            USER1,
+            USER2
+        );
 
         console.log("Like", like);
         console.log("timestamp1111", timestamp);
@@ -160,7 +173,10 @@ contract MatchMakingTest is Test {
         vm.expectRevert();
         matchMaking.unSetLikeOnExpiration(USER1, USER2);
 
-        (bool like, uint timestamp) = matchMaking.s_likes(USER1, USER2);
+        (bool like, uint timestamp, uint _amount) = matchMaking.s_likes(
+            USER1,
+            USER2
+        );
 
         console.log("Like", like);
         console.log("timestamp1111", timestamp);
@@ -183,8 +199,10 @@ contract MatchMakingTest is Test {
         vm.recordLogs();
         matchMaking.like{value: requiredWei}(USER1);
 
-        (bool liked12, ) = matchMaking.s_likes(USER1, USER2);
-        (bool liked21, ) = matchMaking.s_likes(USER2, USER1);
+        (bool liked12, uint256 _timestamp12, uint256 _amount12) = matchMaking
+            .s_likes(USER1, USER2);
+        (bool liked21, uint256 _timestamp21, uint256 _amount21) = matchMaking
+            .s_likes(USER2, USER1);
         console.log("liked12", liked12);
         console.log("liked21", liked21);
 
@@ -239,8 +257,10 @@ contract MatchMakingTest is Test {
         vm.prank(USER2);
         matchMaking.like{value: requiredWei}(USER1);
 
-        (bool liked12, ) = matchMaking.s_likes(USER1, USER2);
-        (bool liked21, ) = matchMaking.s_likes(USER2, USER1);
+        (bool liked12, uint256 _timestamp12, uint256 _amount12) = matchMaking
+            .s_likes(USER1, USER2);
+        (bool liked21, uint256 _timestamp21, uint256 _amount21) = matchMaking
+            .s_likes(USER2, USER1);
 
         assertEq(liked12, liked21);
 

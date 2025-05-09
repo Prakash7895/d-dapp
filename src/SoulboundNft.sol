@@ -25,41 +25,37 @@ contract SoulboundNft is ERC721URIStorage, Owner {
     }
 
     // when user click on sign up on FE, this fn is called and mints a nft for profile picture
-    function createUserProfile(string memory tokenUri) public payable {
-        require(msg.value >= s_mintFee(), "Insufficient mint fee");
+    function verifyUser(string memory tokenUri) public payable {
+        require(msg.value >= s_mintFee(), "INSUFFICIENT_FUNDS");
 
         mintNewNft(tokenUri);
-        setMaxAmount();
     }
 
     function mintNewNft(string memory tokenUri) public {
-        _safeMint(msg.sender, s_tokenCounter);
-        _setTokenURI(s_tokenCounter, tokenUri);
+        uint256 tokenId = s_tokenCounter;
+        _safeMint(msg.sender, tokenId);
+        _setTokenURI(tokenId, tokenUri);
 
-        s_userToTokenIds[msg.sender].push(s_tokenCounter);
+        s_userToTokenIds[msg.sender].push(tokenId);
+        s_activeProfileNft[msg.sender] = tokenId;
 
-        s_activeProfileNft[msg.sender] = s_tokenCounter;
+        emit ProfileMinted(msg.sender, tokenId, tokenUri);
 
-        emit ProfileMinted(msg.sender, s_tokenCounter, tokenUri);
-
-        s_tokenCounter++;
-    }
-
-    function tokenIdExists(uint256 tokenId) internal view returns (bool) {
-        return ownerOf(tokenId) != address(0);
+        unchecked {
+            s_tokenCounter++;
+        }
     }
 
     modifier onlyOwner(uint256 tokenId) {
-        require(ownerOf(tokenId) == msg.sender, "You don't own this NFT");
+        require(ownerOf(tokenId) == msg.sender, "NOT_OWNER");
         _;
     }
 
     function changeProfileNft(uint256 tokenId) public onlyOwner(tokenId) {
-        require(tokenIdExists(tokenId), "Token Id does not exist");
-
-        s_activeProfileNft[msg.sender] = tokenId;
-
-        emit ActiveNftChanged(msg.sender, tokenId);
+        if (s_activeProfileNft[msg.sender] != tokenId) {
+            s_activeProfileNft[msg.sender] = tokenId;
+            emit ActiveNftChanged(msg.sender, tokenId);
+        }
     }
 
     function getUserNfts(address user) public view returns (uint256[] memory) {
@@ -70,22 +66,8 @@ contract SoulboundNft is ERC721URIStorage, Owner {
         address user
     ) public view returns (string memory) {
         uint256 tokenId = s_activeProfileNft[user];
-        require(tokenId != 0, "Your balance is empty");
+        require(tokenId != 0, "NO_NFT");
         return tokenURI(tokenId);
-    }
-
-    function getUserTokenUris(
-        address user
-    ) public view returns (string[] memory) {
-        uint256[] memory tokenIds = s_userToTokenIds[user];
-        uint256 totalTokens = tokenIds.length;
-        string[] memory uris = new string[](totalTokens);
-
-        for (uint256 i = 0; i < totalTokens; i++) {
-            uris[i] = tokenURI(tokenIds[i]);
-        }
-
-        return uris;
     }
 
     function transferFrom(
@@ -93,7 +75,7 @@ contract SoulboundNft is ERC721URIStorage, Owner {
         address to,
         uint256 tokenId
     ) public pure override(ERC721, IERC721) {
-        revert("Not allowed to transfer profile nft..");
+        revert("NOT_ALLOWED");
     }
 
     function safeTransferFrom(
@@ -102,14 +84,13 @@ contract SoulboundNft is ERC721URIStorage, Owner {
         uint256 tokenId,
         bytes memory data
     ) public pure override(ERC721, IERC721) {
-        revert("Not allowed to transfer profile nft...");
+        revert("NOT_ALLOWED");
     }
 
-    function setMaxAmount() internal {
+    function setMaxWithDrawableAmount() public {
+        require(s_owner == msg.sender, "NOT_OWNER");
         s_maxAmountCanWithdraw = address(this).balance;
     }
 
-    receive() external payable {
-        setMaxAmount();
-    }
+    receive() external payable {}
 }

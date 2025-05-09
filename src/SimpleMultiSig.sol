@@ -23,12 +23,12 @@ contract SimpleMultiSig {
     modifier onlyOwner() {
         bool ownerFound = ((msg.sender == s_owner1) ||
             (msg.sender == s_owner2));
-        require(ownerFound, "Not an owner!");
+        require(ownerFound, "NOT_OWNER");
         _;
     }
 
     modifier outOfScope(uint256 proposalIdx) {
-        require(proposalIdx < s_proposals.length, "Index out of scope");
+        require(proposalIdx < s_proposals.length, "OUT_OF_SCOPE");
         _;
     }
 
@@ -63,11 +63,8 @@ contract SimpleMultiSig {
         address payable _destination,
         uint256 _amount
     ) external onlyOwner {
-        require(_amount > 0, "Amount should be greater than 0.");
-        require(
-            _amount <= address(this).balance,
-            "Amount exceeds contract balance"
-        );
+        require(_amount > 0, "PSOSITIVE_AMOUNT");
+        require(_amount <= address(this).balance, "INVALID_AMOUNT");
         Proposal storage newProposal = s_proposals.push();
 
         newProposal.destination = _destination;
@@ -80,19 +77,16 @@ contract SimpleMultiSig {
         uint256 proposalIdx
     ) external onlyOwner outOfScope(proposalIdx) {
         Proposal storage proposal = s_proposals[proposalIdx];
-        require(
-            proposal.status == ProposalStatus.ACTIVE,
-            "Can approve only active proposal"
-        );
+        require(proposal.status == ProposalStatus.ACTIVE, "NOT_ACTIVE");
 
-        require(!proposal.approved[msg.sender], "Already approved!");
+        require(!proposal.approved[msg.sender], "ALREADY_APPROVED");
         proposal.approved[msg.sender] = true;
 
         if (proposal.approved[s_owner1] && proposal.approved[s_owner2]) {
             (bool success, ) = proposal.destination.call{
                 value: proposal.amount
             }("");
-            require(success, "Transfer Failed!");
+            require(success, "TRANSFER_FAILED");
             proposal.status = ProposalStatus.EXECUTED;
         }
     }
@@ -101,10 +95,7 @@ contract SimpleMultiSig {
         uint proposalIdx
     ) external onlyOwner outOfScope(proposalIdx) {
         Proposal storage proposal = s_proposals[proposalIdx];
-        require(
-            proposal.status == ProposalStatus.ACTIVE,
-            "can inactivate only active proposal"
-        );
+        require(proposal.status == ProposalStatus.ACTIVE, "NOT_ACTIVE");
 
         proposal.status = ProposalStatus.INACTIVE;
     }

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.18;
 
 contract Owner {
-    address public s_owner;
+    address public immutable s_owner;
     uint public s_amount;
     uint public s_maxAmountCanWithdraw;
 
@@ -13,20 +13,19 @@ contract Owner {
     }
 
     function transferToOwner(uint256 amount) public {
-        require(msg.sender == s_owner, "Only onwer can withdraw");
-        require(amount > 0, "Amount cannot be 0.");
-        require(
-            amount <= s_maxAmountCanWithdraw,
-            "Amount cannot be greater than maximum withdrawable amount."
-        );
+        require(msg.sender == s_owner, "NOT_OWNER");
+        require(amount > 0, "POSITIVE_AMOUNT");
+        require(amount <= s_maxAmountCanWithdraw, "INVALID_AMOUNT");
         (bool success, ) = payable(s_owner).call{value: amount}("");
-        s_maxAmountCanWithdraw = s_maxAmountCanWithdraw - amount;
-        require(success, "Payment Failed.");
+        unchecked {
+            s_maxAmountCanWithdraw = s_maxAmountCanWithdraw - amount;
+        }
+        require(success, "TRANSFER_FAILED");
     }
 
     function setAmount(uint256 _amount) public {
-        require(msg.sender == s_owner, "Only onwer can update like amount!");
-        require(_amount > 0, "Only greater than 0 values are allowed");
+        require(msg.sender == s_owner, "Not owner");
+        require(_amount > 0, "POSITIVE_AMOUNT");
 
         s_amount = _amount;
     }

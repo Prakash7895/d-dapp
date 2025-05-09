@@ -4,17 +4,12 @@ pragma solidity ^0.8.18;
 import {Script, console} from "forge-std/Script.sol";
 import {MatchMaking} from "../src/MatchMaking.sol";
 import {SoulboundNft} from "../src/SoulboundNft.sol";
-import {PriceConvertor} from "../src/PriceConvertor.sol";
 
 contract DeployDApp is Script {
     function run() external {
         address oracleAddress = getOracleAddress();
         vm.startBroadcast();
-        MatchMaking matchMaking = new MatchMaking(
-            1e18 / 1000,
-            1,
-            oracleAddress
-        );
+        MatchMaking matchMaking = new MatchMaking(1e18 / 1000, 1, 10);
         SoulboundNft soulboundNft = new SoulboundNft(1e18 / 1000);
         console.log("matchMaking", address(matchMaking));
         console.log("soulboundNft", address(soulboundNft));
