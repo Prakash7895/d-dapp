@@ -18,6 +18,9 @@ testMatchMakingMainnet:
 deployDAppOnSepolia:
 	forge script script/DeployDApp.s.sol --rpc-url $(SEPOLIA_RPC_URL) --private-key $(PRIVATE_KEY_ACCOUNT0) --etherscan-api-key $(ETHERSCAN_API_KEY) --broadcast --verify -vvvv
 
+deployToAmoy:
+	forge script script/DeployDApp.s.sol --rpc-url $(AMOY_RPC_URL) --private-key $(MAIN_ACCOUNT_PRIVATE_KEY) --etherscan-api-key $(POLYSCAN_API_KEY) --broadcast --verify $(ARGS) -vvvv
+
 
 # Start local anvil chain
 anvil-node:
